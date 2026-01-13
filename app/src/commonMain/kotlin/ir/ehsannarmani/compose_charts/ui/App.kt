@@ -15,7 +15,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun App(){
+fun App() {
     val density = LocalDensity.current
     var composableWidth by remember { mutableStateOf(0.dp) }
 

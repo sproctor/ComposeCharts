@@ -9,7 +9,6 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.jetbrainsCompose)
     alias(libs.plugins.compose.compiler)
-
 }
 
 kotlin {
@@ -66,12 +65,8 @@ kotlin {
     }
 
     sourceSets {
-        val desktopMain by getting
-
         androidMain.dependencies {
             implementation(compose.preview)
-            implementation(libs.androidx.core.ktx)
-            implementation(libs.androidx.lifecycle.runtime.ktx)
             implementation(libs.androidx.activity.compose)
         }
         commonMain.dependencies {
@@ -83,18 +78,21 @@ kotlin {
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
         }
-        desktopMain.dependencies {
-            implementation(compose.desktop.currentOs)
+        val desktopMain by getting {
+            dependencies {
+                implementation(compose.desktop.currentOs)
+            }
         }
     }
 }
+
 android {
     namespace = "ir.ehsannarmani.compose_charts"
     compileSdk = 36
 
     defaultConfig {
         applicationId = "ir.ehsannarmani.compose_charts"
-        minSdk = 21
+        minSdk = 23
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"

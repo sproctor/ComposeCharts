@@ -7,11 +7,9 @@ import androidx.activity.enableEdgeToEdge
 import ir.ehsannarmani.compose_charts.ui.App
 import ir.ehsannarmani.compose_charts.ui.theme.ComposeChartsTheme
 
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
 
         enableEdgeToEdge()
         setContent {
@@ -21,4 +19,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-

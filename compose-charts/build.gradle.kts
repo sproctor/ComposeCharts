@@ -15,7 +15,7 @@ mavenPublishing{
         artifactId = "compose-charts",
         version = "0.2.0"
     )
-    pom{
+    pom {
         name.set("Compose Charts")
         description.set("https://github.com/ehsannarmani/ComposeCharts")
         inceptionYear.set("2024")
@@ -45,6 +45,7 @@ mavenPublishing{
     publishToMavenCentral()
     signAllPublications()
 }
+
 kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xcontext-receivers")
@@ -57,10 +58,7 @@ kotlin {
             commonWebpackConfig {
                 outputFileName = "compose-charts.js"
                 devServer = (devServer ?: KotlinWebpackConfig.DevServer()).apply {
-                    static = (static ?: mutableListOf()).apply {
-                        // Serve sources to debug inside browser
-                        add(project.projectDir.path)
-                    }
+                    static(project.projectDir.path)
                 }
             }
         }
@@ -73,10 +71,7 @@ kotlin {
             commonWebpackConfig {
                 outputFileName = "compose-charts.js"
                 devServer = (devServer ?: KotlinWebpackConfig.DevServer()).apply {
-                    static = (static ?: mutableListOf()).apply {
-                        // Serve sources to debug inside browser
-                        add(project.projectDir.path)
-                    }
+                    static(project.projectDir.path)
                 }
             }
         }
@@ -120,7 +115,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        minSdk = 21
+        minSdk = 23
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
