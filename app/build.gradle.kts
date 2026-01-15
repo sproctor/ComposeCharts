@@ -87,11 +87,11 @@ kotlin {
 }
 
 android {
-    namespace = "ir.ehsannarmani.compose_charts"
+    namespace = "ir.ehsannarmani.compose_charts.sample"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "ir.ehsannarmani.compose_charts"
+        applicationId = "ir.ehsannarmani.compose_charts.sample"
         minSdk = 23
         targetSdk = 36
         versionCode = 1
@@ -130,14 +130,19 @@ android {
         debugImplementation(compose.uiTooling)
     }
 }
-compose.desktop {
-    application {
-        mainClass = "MainKt"
+compose{
+    desktop {
+        application {
+            mainClass = "MainKt"
 
-        nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "ir.ehsannarmani.compose_charts"
-            packageVersion = "1.0.0"
+            nativeDistributions {
+                targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+                packageName = "ir.ehsannarmani.compose_charts"
+                packageVersion = "1.0.0"
+            }
         }
+    }
+    resources {
+        packageOfResClass = "composecharts.app.generated.resources"
     }
 }
