@@ -9,11 +9,12 @@ plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.maven.publish)
 }
-mavenPublishing{
+
+mavenPublishing {
     coordinates(
-        groupId = "io.github.ehsannarmani",
+        groupId = System.getProperty("group") ?: "io.github.ehsannarmani",
         artifactId = "compose-charts",
-        version = "0.2.0"
+        version = System.getProperty("version") ?: "0.2.0"
     )
     pom {
         name.set("Compose Charts")
