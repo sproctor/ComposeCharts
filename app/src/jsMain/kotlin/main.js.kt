@@ -1,6 +1,6 @@
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
-import ir.ehsannarmani.compose_charts.ui.App
+import com.seanproctor.composecharts.ui.App
 import kotlinx.browser.document
 import org.jetbrains.skiko.wasm.onWasmReady
 

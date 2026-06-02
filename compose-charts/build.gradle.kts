@@ -4,7 +4,7 @@ import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.jetbrainsCompose)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.maven.publish)
@@ -82,11 +82,10 @@ kotlin {
         binaries.library()
     }
 
-    androidTarget {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_1_8)
-        }
-        publishLibraryVariants("release","debug")
+    androidLibrary {
+        namespace = "com.seanproctor.composecharts"
+        compileSdk = 36
+        minSdk = 21
     }
 
     jvm("desktop")
@@ -101,29 +100,5 @@ kotlin {
             // and add a dependency on ui-tooling to the androidDebug variant
             //implementation(libs.compose.ui.tooling.preview)
         }
-    }
-}
-
-android {
-    namespace = "ir.ehsannarmani.compose_charts"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 23
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
     }
 }
