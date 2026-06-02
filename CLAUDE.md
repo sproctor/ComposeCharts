@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Compose Charts is a Kotlin Multiplatform charting library for Compose Multiplatform, published to Maven Central as `io.github.ehsannarmani:compose-charts`. It targets Android, Desktop (JVM), iOS, JS (browser), and Wasm/JS. The library exposes four chart composables — `LineChart`, `ColumnChart`, `RowChart`, `PieChart` — all drawn manually on a Compose `Canvas`/`DrawScope`.
 
-Note: the Kotlin package/Android namespace is `ir.ehsannarmani.compose_charts`, but the published Maven coordinates use the `io.github.ehsannarmani` group.
+Note: the Kotlin package/Android namespace is `com.seanproctor.composecharts`, but the published Maven coordinates use the `io.github.ehsannarmani` group.
 
 ## Modules
 

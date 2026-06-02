@@ -4,7 +4,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.jetbrainsCompose)
     alias(libs.plugins.compose.compiler)
@@ -39,7 +39,11 @@ kotlin {
         useEsModules()
     }
 
-    androidTarget {
+    androidLibrary {
+        namespace = "com.seanproctor.composecharts.shared"
+        compileSdk = 36
+        minSdk = 23
+
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_1_8)
         }
@@ -60,9 +64,6 @@ kotlin {
     sourceSets {
         val desktopMain by getting
 
-        androidMain.dependencies {
-            implementation(libs.androidx.activity.compose)
-        }
         commonMain.dependencies {
             implementation(project(":compose-charts"))
             implementation(libs.compose.foundation)
@@ -74,54 +75,14 @@ kotlin {
         }
     }
 }
-android {
-    namespace = "ir.ehsannarmani.compose_charts"
-    compileSdk = 36
 
-    defaultConfig {
-        applicationId = "ir.ehsannarmani.compose_charts.app"
-        minSdk = 23
-        targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-
-    buildFeatures {
-        compose = true
-    }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-}
 compose.desktop {
     application {
         mainClass = "MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "ir.ehsannarmani.compose_charts"
+            packageName = "com.seanproctor.composecharts"
             packageVersion = "1.0.0"
         }
     }
