@@ -21,6 +21,7 @@ import com.seanproctor.composecharts.models.DotProperties
 import com.seanproctor.composecharts.models.LabelProperties
 import com.seanproctor.composecharts.models.Line
 import com.seanproctor.composecharts.models.PopupProperties
+import com.seanproctor.composecharts.ui.ChartParent
 
 @Composable
 fun TabletSample() {
@@ -54,7 +55,7 @@ fun TabletSample() {
                     },
                     dotsProperties = DotProperties(
                         enabled = true,
-                        color = SolidColor(Color.White)
+                        color = SolidColor(MaterialTheme.colorScheme.onSurface)
                     ),
                     modifier = Modifier.padding(22.dp),
                     animationMode = AnimationMode.None,
