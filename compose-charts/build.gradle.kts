@@ -56,7 +56,6 @@ kotlin {
                 }
             }
         }
-        binaries.library()
         binaries.executable()
     }
 
@@ -70,7 +69,6 @@ kotlin {
                 }
             }
         }
-        binaries.library()
         binaries.executable()
     }
 
