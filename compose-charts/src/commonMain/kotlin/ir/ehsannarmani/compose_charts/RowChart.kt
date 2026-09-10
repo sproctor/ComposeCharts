@@ -6,11 +6,26 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.*
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -30,13 +45,30 @@ import ir.ehsannarmani.compose_charts.extensions.addRoundRect
 import ir.ehsannarmani.compose_charts.extensions.drawGridLines
 import ir.ehsannarmani.compose_charts.extensions.spaceBetween
 import ir.ehsannarmani.compose_charts.extensions.split
-import ir.ehsannarmani.compose_charts.models.*
-import ir.ehsannarmani.compose_charts.utils.*
+import ir.ehsannarmani.compose_charts.models.AnimationMode
+import ir.ehsannarmani.compose_charts.models.BarPopupData
+import ir.ehsannarmani.compose_charts.models.BarProperties
+import ir.ehsannarmani.compose_charts.models.Bars
+import ir.ehsannarmani.compose_charts.models.DividerProperties
+import ir.ehsannarmani.compose_charts.models.GridProperties
+import ir.ehsannarmani.compose_charts.models.IndicatorPosition
+import ir.ehsannarmani.compose_charts.models.LabelHelperProperties
+import ir.ehsannarmani.compose_charts.models.LabelProperties
+import ir.ehsannarmani.compose_charts.models.PopupProperties
+import ir.ehsannarmani.compose_charts.models.SelectedBar
+import ir.ehsannarmani.compose_charts.models.VerticalIndicatorProperties
+import ir.ehsannarmani.compose_charts.models.ZeroLineProperties
+import ir.ehsannarmani.compose_charts.models.asRadiusPx
+import ir.ehsannarmani.compose_charts.utils.ImplementRCAnimation
+import ir.ehsannarmani.compose_charts.utils.VerticalLabels
+import ir.ehsannarmani.compose_charts.utils.calculateOffset
+import ir.ehsannarmani.compose_charts.utils.checkRCMaxValue
+import ir.ehsannarmani.compose_charts.utils.checkRCMinValue
+import ir.ehsannarmani.compose_charts.utils.rememberComputedChartMaxValue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun RowChart(
     modifier: Modifier = Modifier,
