@@ -28,23 +28,38 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ir.ehsannarmani.compose_charts.components.LabelHelper
+import ir.ehsannarmani.compose_charts.extensions.degreeToRadians
+import ir.ehsannarmani.compose_charts.extensions.format
 import ir.ehsannarmani.compose_charts.extensions.getAngleInDegree
-import ir.ehsannarmani.compose_charts.extensions.isInsideCircle
+import ir.ehsannarmani.compose_charts.extensions.isInsidePie
+import ir.ehsannarmani.compose_charts.models.DrawStyle
 import ir.ehsannarmani.compose_charts.models.LabelHelperProperties
 import ir.ehsannarmani.compose_charts.models.Pie
+import ir.ehsannarmani.compose_charts.models.StrokeStyle
 import kotlinx.coroutines.launch
-import kotlin.random.Random
+import kotlin.math.cos
+import kotlin.math.sin
 
 @Composable
 fun PieChart(
     modifier: Modifier = Modifier,
     data: List<Pie>,
+    startDegree: Float = 0f,
     spaceDegree: Float = 0f,
     onPieClick: (Pie) -> Unit = {},
     selectedScale: Float = 1.1f,
@@ -57,6 +72,7 @@ fun PieChart(
     spaceDegreeAnimExitSpec: AnimationSpec<Float> = spaceDegreeAnimEnterSpec,
     labelHelperProperties: LabelHelperProperties = LabelHelperProperties(),
     labelHelperPadding: Dp = 26.dp,
+    labelMode: LabelMode = LabelMode.Heading,
     style: Pie.Style = Pie.Style.Fill
 ) {
 
@@ -66,6 +82,7 @@ fun PieChart(
 
     val onPieClick by rememberUpdatedState(onPieClick)
     val scope = rememberCoroutineScope()
+    val textMeasurer = rememberTextMeasurer()
 
     var pieChartCenter by remember {
         mutableStateOf(Offset.Zero)
@@ -88,11 +105,12 @@ fun PieChart(
             data.mapIndexed { mapIndex, chart ->
                 if (mapIndex < currDetailsSize) {
                     PieDetails(
-                        id = details[mapIndex].id,
                         pie = chart,
                         scale = details[mapIndex].scale,
                         color = details[mapIndex].color,
-                        space = details[mapIndex].space
+                        space = details[mapIndex].space,
+                        pieLabelAlpha = details[mapIndex].pieLabelAlpha,
+                        outerLabelLineProgress = details[mapIndex].outerLabelLineProgress,
                     )
                 } else {
                     PieDetails(pie = chart)
@@ -145,6 +163,24 @@ fun PieChart(
                     )
                 }
             }
+            if (labelHelperProperties.enabled && labelMode is LabelMode.OnPie){
+                val showLabel = labelMode.show(it.pie)
+                if (showLabel){
+                    scope.launch {
+                        it.outerLabelLineProgress.animateTo(1f, animationSpec = labelMode.animationSpec)
+                    }
+                    scope.launch {
+                        it.pieLabelAlpha.animateTo(1f, animationSpec = labelMode.animationSpec)
+                    }
+                }else{
+                    scope.launch {
+                        it.outerLabelLineProgress.animateTo(0f, animationSpec = labelMode.animationSpec)
+                    }
+                    scope.launch {
+                        it.pieLabelAlpha.animateTo(0f, animationSpec = labelMode.animationSpec)
+                    }
+                }
+            }
         }
     }
 
@@ -152,7 +188,7 @@ fun PieChart(
         modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (labelHelperProperties.enabled) {
+        if (labelHelperProperties.enabled && labelMode is LabelMode.Heading) {
             data.mapNotNull { pie -> pie.label?.let { pie.label to SolidColor(pie.color) } }
                 .takeIf { it.isNotEmpty() }
                 ?.let {
@@ -161,20 +197,31 @@ fun PieChart(
                 }
         }
         Canvas(modifier = modifier
-            .pointerInput(Unit) {
+            .pointerInput(pieces.size, startDegree, data) {
                 detectTapGestures { offset ->
                     val angleInDegree = getAngleInDegree(
                         touchTapOffset = offset,
                         pieceOffset = pieChartCenter
                     )
+                    val normalizedAngle =
+                        ((angleInDegree - startDegree) % 360f + 360f) % 360f
 
                     pieces.firstOrNull { piece ->
-                        angleInDegree in piece.startFromDegree..piece.endToDegree &&
-                                isInsideCircle(offset, pieChartCenter, piece.radius)
+                        normalizedAngle in piece.startFromDegree..piece.endToDegree &&
+                                isInsidePie(
+                                    touchTapOffset = offset,
+                                    pieceOffset = pieChartCenter,
+                                    radius = piece.radius,
+                                    style = details
+                                        .firstOrNull { it.pie.id == piece.id }
+                                        ?.pie
+                                        ?.style
+                                        ?: style
+                                )
                     }
                         ?.let {
                             val (id, _) = it
-                            details.find { it.id == id }
+                            details.find { it.pie.id == id }
                                 ?.let {
                                     onPieClick(it.pie)
                                 }
@@ -183,16 +230,17 @@ fun PieChart(
             }
         ) {
             pieChartCenter = center
+            pieces.clear()
 
-            val radius: Float = when (style) {
-                is Pie.Style.Fill -> {
-                    (minOf(size.width, size.height) / 2)
-                }
-
-                is Pie.Style.Stroke -> {
-                    (minOf(size.width, size.height) / 2) - (style.width.toPx() / 2)
-                }
+            // outer space for label
+            val labelSpace = if (labelMode is LabelMode.OnPie) {
+                (labelMode.outerLineSize.first + labelMode.outerLineSize.second + 24.dp).toPx()
+            } else {
+                0f
             }
+
+            val dataContainsDifferentPieStyles = data.map { it.style ?: style }.toSet().count() > 1
+
             val total = details.sumOf { it.pie.data } // 360 degree for total
             details.forEachIndexed { index, detail ->
                 val degree = ((detail.pie.data * 360) / total)
@@ -202,12 +250,37 @@ fun PieChart(
                 } else {
                     Fill
                 }
+                var radius: Float = when (drawStyle) {
+                    is Fill -> {
+                        (minOf(size.width, size.height) / 2) - labelSpace
+                    }
+
+                    is Stroke -> {
+                        (minOf(size.width, size.height) / 2) - (drawStyle.width / 2) - labelSpace
+                    }
+                }
+
+                // Equalize radius with highest radius
+                if(dataContainsDifferentPieStyles){
+                    val highestStroke = data
+                        .map { it.style ?: style }
+                        .filterIsInstance<Pie.Style.Stroke>()
+                        .maxByOrNull { it.width.toPx() }
+                    highestStroke?.let { stroke->
+                        if (drawStyle is Fill){
+                            radius += stroke.width.toPx()/2
+                        }else if (drawStyle is Stroke){
+                            val strokeDiff = stroke.width.toPx()-drawStyle.width
+                            radius += strokeDiff/2
+                        }
+                    }
+                }
                 val piecePath = if (degree >= 360.0) {
                     // draw circle instead of arc
 
                     pieces.add(
                         PiePiece(
-                            id = detail.id,
+                            id = detail.pie.id,
                             radius = radius * detail.scale.value,
                             startFromDegree = 0f,
                             endToDegree = 360f
@@ -224,15 +297,16 @@ fun PieChart(
                     }
                 } else {
                     val beforeItems = data.filterIndexed { filterIndex, chart -> filterIndex < index }
-                    val startFromDegree = beforeItems.sumOf { (it.data * 360) / total }
+                    val sliceStart = beforeItems.sumOf { (it.data * 360) / total }.toFloat()
 
                     val arcRect = Rect(
                         center = center,
                         radius = radius * detail.scale.value
                     )
 
-                    val arcStart = startFromDegree.toFloat() + detail.space.value
+                    val arcStart = sliceStart + detail.space.value + startDegree
                     val arcSweep = degree.toFloat() - ((detail.space.value * 2) + spaceDegree)
+                    val sliceEnd = sliceStart + detail.space.value + arcSweep
 
                     val piecePath = Path().apply {
                         arcTo(arcRect, arcStart, arcSweep, true)
@@ -258,10 +332,10 @@ fun PieChart(
 
                     pieces.add(
                         PiePiece(
-                            id = detail.id,
+                            id = detail.pie.id,
                             radius = radius * detail.scale.value,
-                            startFromDegree = arcStart,
-                            endToDegree = if (arcStart + arcSweep >= 360f) 360f else arcStart + arcSweep,
+                            startFromDegree = sliceStart + detail.space.value,
+                            endToDegree = if (sliceEnd >= 360f) 360f else sliceEnd,
                         )
                     )
                     piecePath
@@ -272,18 +346,178 @@ fun PieChart(
                     color = detail.color.value,
                     style = drawStyle,
                 )
+                if (labelHelperProperties.enabled && labelMode is LabelMode.OnPie){
+                    drawOnPieLabel(
+                        data = data,
+                        index = index,
+                        degree = degree,
+                        total = total,
+                        detail = detail,
+                        startDegree = startDegree,
+                        spaceDegree = spaceDegree,
+                        radius = radius,
+                        labelMode = labelMode,
+                        textMeasurer = textMeasurer,
+                        pathMeasure = pathMeasure,
+                        labelHelperProperties = labelHelperProperties,
+                        style = detail.pie.style ?: style
+                    )
+                }
             }
         }
     }
 }
 
+private fun DrawScope.drawOnPieLabel(
+    data: List<Pie>,
+    index: Int,
+    degree: Double,
+    total: Double,
+    detail: PieDetails,
+    startDegree: Float,
+    spaceDegree: Float,
+    radius: Float,
+    labelMode: LabelMode.OnPie,
+    textMeasurer: TextMeasurer,
+    pathMeasure: PathMeasure,
+    style: Pie.Style,
+    labelHelperProperties: LabelHelperProperties
+) {
+    val beforeItems = data.filterIndexed { filterIndex, chart -> filterIndex < index }
+    // Slice center angle (canvas: 0 = 3 o'clock, clockwise)
+    val midDegree = if (degree >= 360.0) {
+        -90f // Any angle is suitable for a perfect circle.
+    } else {
+        val arcStart = beforeItems.sumOf { (it.data * 360) / total }.toFloat() +
+                detail.space.value + startDegree
+        val arcSweep = degree.toFloat() - ((detail.space.value * 2) + spaceDegree)
+        arcStart + arcSweep / 2f
+    }
+
+    val rad = midDegree.degreeToRadians()
+    val cosA = cos(rad).toFloat()
+    val sinA = sin(rad).toFloat()
+    val effectiveRadius = when(style){
+        Pie.Style.Fill -> (radius*detail.scale.value)
+        is Pie.Style.Stroke -> (radius*detail.scale.value) + style.width.toPx()/2f
+    }
+
+    // Pie Inner Label
+    val innerText = when (val content = labelMode.innerLabelContent) {
+        is PieInnerLabelContent.Custom -> {
+            content.transform(detail.pie)
+        }
+
+        is PieInnerLabelContent.Percentage -> {
+            val percent = (detail.pie.data.toFloat() / total.toFloat()) * 100f
+            content.transform(percent)
+        }
+    }
+    innerText?.let {
+        val innerRadius = when(style){
+            Pie.Style.Fill -> effectiveRadius * 0.6f
+            is Pie.Style.Stroke -> effectiveRadius - style.width.toPx()/2
+        }
+        val innerLayout = textMeasurer.measure(
+            text = AnnotatedString(innerText),
+            style = labelMode.innerLabelStyle
+        )
+        drawText(
+            textLayoutResult = innerLayout,
+            topLeft = Offset(
+                x = center.x + cosA * innerRadius - innerLayout.size.width / 2f,
+                y = center.y + sinA * innerRadius - innerLayout.size.height / 2f
+            ),
+            alpha = detail.pieLabelAlpha.value
+        )
+    }
+    // Pie Outer Label With Line
+    detail.pie.label?.let { labelText ->
+        val lineStart = Offset(
+            x = center.x + cosA * effectiveRadius,
+            y = center.y + sinA * effectiveRadius
+        )
+        // The knee point of the line, slightly outside the edge
+        val elbowRadius = effectiveRadius + labelMode.outerLineSize.first.toPx()
+        val elbow = Offset(
+            x = center.x + cosA * elbowRadius,
+            y = center.y + sinA * elbowRadius
+        )
+        val onRight = cosA >= 0f
+        val horizontalLen = labelMode.outerLineSize.second.toPx()
+        val lineEnd = Offset(
+            x = elbow.x + if (onRight) horizontalLen else -horizontalLen,
+            y = elbow.y
+        )
+        val linePath = Path().apply {
+            moveTo(lineStart.x, lineStart.y)
+            lineTo(elbow.x, elbow.y)
+            lineTo(lineEnd.x, lineEnd.y)
+        }
+        pathMeasure.setPath(linePath, false)
+        val animatedLinePath = Path()
+        pathMeasure.getSegment(
+            0f,
+            pathMeasure.length * detail.outerLabelLineProgress.value,
+            animatedLinePath
+        )
+
+        drawPath(
+            path = animatedLinePath,
+            color = detail.color.value,
+            style = Stroke(
+                width = labelMode.outerLineStyle.width.toPx(),
+                pathEffect = labelMode.outerLineStyle.strokeStyle.pathEffect
+            )
+        )
+
+        val outerLayout = textMeasurer.measure(
+            text = AnnotatedString(labelText),
+            style = labelHelperProperties.textStyle
+        )
+        drawText(
+            textLayoutResult = outerLayout,
+            topLeft = Offset(
+                x = if (onRight) lineEnd.x + 4.dp.toPx() else lineEnd.x - outerLayout.size.width - 4.dp.toPx(),
+                y = lineEnd.y - outerLayout.size.height / 2f
+            ),
+            alpha = detail.pieLabelAlpha.value
+        )
+    }
+}
+
+
+sealed interface LabelMode {
+    data object Heading: LabelMode
+    data class OnPie(
+        val outerLineSize: Pair<Dp,Dp> = 12.dp to 16.dp,
+        val outerLineStyle: DrawStyle.Stroke = DrawStyle.Stroke(
+            width = 1.5.dp,
+            strokeStyle = StrokeStyle.Normal
+        ),
+        val innerLabelStyle: TextStyle = TextStyle(
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        ),
+        val show: (Pie)-> Boolean = { true },
+        val innerLabelContent: PieInnerLabelContent = PieInnerLabelContent.Percentage(),
+        val animationSpec: AnimationSpec<Float> = tween(300, delayMillis = 100)
+    ): LabelMode
+}
+sealed interface PieInnerLabelContent{
+    data class Percentage(val transform:(Float)->String = { it.format(1)+"%" }): PieInnerLabelContent
+    data class Custom(val transform: (Pie) -> String?): PieInnerLabelContent
+}
 
 private data class PieDetails(
-    val id: String = Random.nextInt(0, 999999).toString(),
     val pie: Pie,
     val color: Animatable<Color, AnimationVector4D> = Animatable(pie.color),
     val scale: Animatable<Float, AnimationVector1D> = Animatable(1f),
-    val space: Animatable<Float, AnimationVector1D> = Animatable(0f)
+    val space: Animatable<Float, AnimationVector1D> = Animatable(0f),
+    val outerLabelLineProgress:Animatable<Float, AnimationVector1D> = Animatable(0f),
+    val pieLabelAlpha:Animatable<Float, AnimationVector1D> = Animatable(0f),
 )
 
 private data class PiePiece(
